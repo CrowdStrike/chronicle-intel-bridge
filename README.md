@@ -1,0 +1,1 @@
+# CrowdStrike Chronicle Intel Bridge

@@ -1,0 +1,2 @@
+crowdstrike-falconpy
+google-api-python-client
