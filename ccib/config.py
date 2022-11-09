@@ -37,6 +37,9 @@ class FigConfig(configparser.SafeConfigParser):
         self.validate_falcon()
         self.validate_chronicle()
 
+        if len(self.get('state', 'file')) == 0:
+            raise Exception('Malformed Configuration: expected state.file to be non-empty')
+
     def validate_falcon(self):
         if self.get('falcon', 'cloud_region') not in self.FALCON_CLOUD_REGIONS:
             raise Exception(
