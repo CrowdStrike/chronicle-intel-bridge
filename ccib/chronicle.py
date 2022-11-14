@@ -21,13 +21,6 @@ class Chronicle:
         self.http_session = requests.AuthorizedSession(self.credentials)
 
     def send_indicators(self, indicators):
-        count = len(indicators)
-
-        for i in range(0, count, 250):
-            batch = indicators[i:i + 250]
-            self._send_indicators_batch(batch)
-
-    def _send_indicators_batch(self, indicators):
         batch = [
             {
                 "log_text": json.dumps(i),

@@ -51,8 +51,21 @@ class ChronicleWriterThread(threading.Thread):
 
     def run(self):
         while True:
+            indicators = self.queue.get()
+            self._send_indicators(indicators)
+
+    def _send_indicators(self, indicators):
+        count = len(indicators)
+        for i in range(0, count, 250):
+            batch = indicators[i:i + 250]
+            self._send_indicators_batch(batch)
+
+    def _send_indicators_batch(self, batch):
+        for i in range(0, 30):
             try:
-                batch = self.queue.get()
                 self.chronicle.send_indicators(batch)
+                return
             except Exception:  # pylint: disable=W0703
                 log.exception("Error occurred while processing indicators batch")
+                time.sleep(i)
+        log.critical("Could not transmit indicators to Chronicle")
