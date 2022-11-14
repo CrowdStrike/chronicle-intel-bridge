@@ -46,10 +46,7 @@ class ICache:
                     if aset != bset:
                         return False
                 else:
-                    print("{}:".format(k))
-                    print("    '{}'".format(v))
-                    print("    '{}'".format(cpy[k]))
-                    breakpoint()
+                    return False
         return True
 
 
