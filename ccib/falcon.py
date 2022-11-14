@@ -23,22 +23,11 @@ class FalconAPI():
         client_id = config.get('falcon', 'client_id')
         client_secret = config.get('falcon', 'client_secret')
         crowdstrike_url = self.__class__.base_url()
-
         self.intel = Intel(client_id=client_id, client_secret=client_secret, base_url=crowdstrike_url)
-        self.client = FalconSDK.APIHarness(creds={
-            'client_id': config.get('falcon', 'client_id'),
-            'client_secret': config.get('falcon', 'client_secret')},
-            base_url=self.__class__.base_url())
 
     @classmethod
     def base_url(cls):
         return 'https://' + cls.CLOUD_REGIONS[config.get('falcon', 'cloud_region')]
-
-    def batched_indicators(self, filter):
-        pagination, resources = self._indicators(filter)
-        log.debug("Found %s indicators with filter: %s", pagination['total'], filter)
-        breakpoint()
-        return resources
 
     @property
     def request_size_limit(self):
@@ -53,8 +42,6 @@ class FalconAPI():
         first_run = True
 
         while len(indicators_in_request) == self.request_size_limit or first_run:
-            x = f"_marker:>='{start_time}'+deleted:false"
-
             resp_json = self.intel.query_indicator_entities(
                 sort="_marker.asc",
                 filter=f"_marker:>='{start_time}'+deleted:false",
@@ -87,27 +74,3 @@ class FalconAPI():
             if last_marker == '':
                 break
             start_time = last_marker
-
-    def _indicators(self, filter):
-        pagination, resources = self._resources(
-            action='QueryIntelIndicatorEntities', filter=filter, include_deleted=False)
-        return pagination, resources
-
-    def _resources(self, *args, **kwargs):
-        response = self._command(*args, **kwargs)
-        body = response['body']
-
-        meta = body.get('meta', {})
-        pagination = meta.get('pagination', {})
-        resources = body.get('resources', [])
-        return pagination, resources
-
-    def _command(self, *args, **kwargs):
-        response = self.client.command(*args, **kwargs)
-        body = response['body']
-        if 'errors' in body and body['errors'] is not None:
-            if len(body['errors']) > 0:
-                raise ApiError('Error received from CrowdStrike Falcon platform: {}'.format(body['errors']))
-        if 'status_code' not in response or (response['status_code'] != 200 and response['status_code'] != 201):
-            raise ApiError('Unexpected response code from Falcon API. Response was: {}'.format(response))
-        return response
