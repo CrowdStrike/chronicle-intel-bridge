@@ -24,26 +24,23 @@ class ICache:
         if self.cache[iid] == indicator:
             return True
 
-        cpy = indicator
-        for k, v in self.cache[iid].items():
-            if v != cpy[k]:
-                if v is None or cpy[k] is None:
+        return self.__class__.indicators_equal(self.cache[iid], indicator)
+
+    @classmethod
+    def indicators_equal(cls, one, other):
+        for k, v in one.items():
+            if v != other[k]:
+                if v is None or other[k] is None:
                     return False
 
-                if isinstance(v, list) and isinstance(cpy[k], list):
-                    if len(v) != len(cpy[k]):
+                if isinstance(v, list) and isinstance(other[k], list):
+                    if len(v) != len(other[k]):
                         return False
                 if k == 'labels':
-                    # sorting of the labels sometimes mismatches
-                    aset = set(l['name'] for l in v)
-                    bset = set(l['name'] for l in cpy[k])
-
-                    if aset != bset:
+                    if set(label['name'] for label in v) != set(label['name'] for label in other[k]):
                         return False
                 elif k == 'relations':
-                    aset = set(l['id'] for l in v)
-                    bset = set(l['id'] for l in cpy[k])
-                    if aset != bset:
+                    if set(rel['id'] for rel in v) != set(rel['id'] for rel in other[k]):
                         return False
                 else:
                     return False

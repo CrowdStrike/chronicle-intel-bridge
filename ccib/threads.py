@@ -25,7 +25,6 @@ class FalconReaderThread(threading.Thread):
         while True:
             last_check_time = time.time()
 
-            outbound = []
             stats = {'received': 0, 'skipped': 0, 'sent': 0}
             for batch in self.falcon.get_indicators(ts):
                 to_be_sent = [i for i in batch if not icache.exists(transform(i))]

@@ -1,6 +1,5 @@
 from functools import reduce
 import time
-from falconpy import api_complete as FalconSDK
 from .config import config
 from .log import log
 from .helper import thousands

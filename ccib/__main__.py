@@ -1,4 +1,3 @@
-import time
 from queue import Queue
 from .falcon import FalconAPI
 from .config import config
