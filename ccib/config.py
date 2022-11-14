@@ -31,8 +31,7 @@ class FigConfig(configparser.SafeConfigParser):
                 self.get(section, var)
             except configparser.NoOptionError as err:
                 raise Exception(
-                    "Please provide environment variable {} or configuration option {}.{}".format(
-                        envvar, section, var)) from err
+                    f"Please provide environment variable {envvar} or configuration option {section}.{var}") from err
 
         self.validate_falcon()
         self.validate_chronicle()
@@ -43,7 +42,7 @@ class FigConfig(configparser.SafeConfigParser):
     def validate_falcon(self):
         if self.get('falcon', 'cloud_region') not in self.FALCON_CLOUD_REGIONS:
             raise Exception(
-                'Malformed configuration: expected falcon.cloud_region to be in {}'.format(self.FALCON_CLOUD_REGIONS)
+                f'Malformed configuration: expected falcon.cloud_region to be in {self.FALCON_CLOUD_REGIONS}'
             )
         if len(self.get('falcon', 'client_id')) == 0:
             raise Exception('Malformed Configuration: expected chronicle.client_id to be non-empty')

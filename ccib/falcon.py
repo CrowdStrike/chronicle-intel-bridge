@@ -1,10 +1,9 @@
 from functools import reduce
 import time
+from falconpy import Intel
 from .config import config
 from .log import log
 from .helper import thousands
-
-from falconpy import Intel
 
 
 class ApiError(Exception):
@@ -47,9 +46,7 @@ class FalconAPI():
                 errors = body.get('errors', [])
 
                 if status_code != 200 or errors:
-                    raise Exception(
-                        'Unexpected response status from CrowdStrike Falcon: {} Errors: {}'.format(
-                            status_code, errors))
+                    raise Exception(f'Unexpected response status from CrowdStrike Falcon: {status_code} Errors: {errors}')
 
                 return body
             except Exception:  # pylint: disable=W0703
