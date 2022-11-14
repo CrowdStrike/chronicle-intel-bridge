@@ -1,4 +1,5 @@
 from functools import reduce
+import time
 from falconpy import api_complete as FalconSDK
 from .config import config
 from .log import log
@@ -33,6 +34,29 @@ class FalconAPI():
     def request_size_limit(self):
         return 1000
 
+    def _fetch_indicators(self, marker):
+        while True:
+            try:
+                resp_json = self.intel.query_indicator_entities(
+                    sort="_marker.asc",
+                    filter=f"_marker:>='{marker}'+deleted:false",
+                    limit=self.request_size_limit,
+                    include_deleted=False
+                )
+                status_code = resp_json.get('status_code', 200)
+                body = resp_json['body']
+                errors = body.get('errors', [])
+
+                if status_code != 200 or errors:
+                    raise Exception(
+                        'Unexpected response status from CrowdStrike Falcon: {} Errors: {}'.format(
+                            status_code, errors))
+
+                return body
+            except Exception:  # pylint: disable=W0703
+                log.exception("Error occurred while processing indicators batch")
+                time.sleep(5)
+
     def get_indicators(self, start_time):
         """Get all the indicators that were updated after a certain moment in time (UNIX).
 
@@ -42,24 +66,17 @@ class FalconAPI():
         first_run = True
 
         while len(indicators_in_request) == self.request_size_limit or first_run:
-            resp_json = self.intel.query_indicator_entities(
-                sort="_marker.asc",
-                filter=f"_marker:>='{start_time}'+deleted:false",
-                limit=self.request_size_limit,
-                include_deleted=False
-            )
-            if "body" in resp_json:
-                resp_json = resp_json["body"]
-
             first_run = False
 
-            indicators_in_request = resp_json.get('resources', [])
+            body = self._fetch_indicators(start_time)
+
+            indicators_in_request = body.get('resources', [])
             if not indicators_in_request:
                 break
 
             total_found = reduce(lambda d, key: d.get(key, None) if isinstance(d, dict) else None,
                                  "meta.pagination.total".split("."),
-                                 resp_json
+                                 body
                                  )
             log.info(
                 "Retrieved %s of %s remaining indicators.",
