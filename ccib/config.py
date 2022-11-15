@@ -36,8 +36,8 @@ class FigConfig(configparser.SafeConfigParser):
         self.validate_falcon()
         self.validate_chronicle()
 
-        if len(self.get('state', 'file')) == 0:
-            raise Exception('Malformed Configuration: expected state.file to be non-empty')
+        if int(self.get('indicators', 'sync_frequency')) not in range(1, 3600):
+            raise Exception('Malformed configuration: expected indicators.sync_frequency to be in range 1-3600')
 
     def validate_falcon(self):
         if self.get('falcon', 'cloud_region') not in self.FALCON_CLOUD_REGIONS:

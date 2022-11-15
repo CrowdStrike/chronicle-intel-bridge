@@ -1,6 +1,7 @@
 import threading
 import time
 from .icache import icache
+from .config import config
 from .log import log
 
 
@@ -18,6 +19,7 @@ class FalconReaderThread(threading.Thread):
         super().__init__(*args, **kwargs)
         self.falcon = falcon
         self.queue = queue
+        self.frequency = int(config.get('indicators', 'sync_frequency'))
 
     def run(self):
         ts = time.time() - 60 * 30 * 2 * 4
@@ -39,7 +41,7 @@ class FalconReaderThread(threading.Thread):
 
             log.info("Statistics: %s", stats)
             ts = last_check_time
-            time.sleep(60)
+            time.sleep(self.frequency)
 
 
 class ChronicleWriterThread(threading.Thread):
