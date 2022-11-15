@@ -27,6 +27,15 @@ CrowdStrike to Chronicle Intel Bridge forwards CrowdStrike Falcon Intelligence I
           quay.io/crowdstrike/chronicle-intel-bridge:latest
    ```
 
+### Advanced Configuration
+
+ - Consult [configuration file template](config/config.ini) for available configuration options:
+ - Modify template to suite your needs
+ - Mount configuration file to the container
+   ```
+       -v config.ini:/ccib/config.ini
+   ```
+
 
 ### Developer instructions
 
