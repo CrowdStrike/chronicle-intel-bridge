@@ -22,7 +22,7 @@ class FalconReaderThread(threading.Thread):
         self.frequency = int(config.get('indicators', 'sync_frequency'))
 
     def run(self):
-        ts = time.time() - 60 * 30 * 2 * 4
+        ts = time.time() - int(config.get('indicators', 'initial_sync_lookback'))
 
         while True:
             last_check_time = time.time()

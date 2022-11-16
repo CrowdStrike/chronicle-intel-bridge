@@ -38,6 +38,8 @@ class FigConfig(configparser.SafeConfigParser):
 
         if int(self.get('indicators', 'sync_frequency')) not in range(1, 3600):
             raise Exception('Malformed configuration: expected indicators.sync_frequency to be in range 1-3600')
+        if int(self.get('indicators', 'initial_sync_lookback')) not in range(60, 7776000):
+            raise Exception('Malformed configuration: expected indicators.initial_sync_lookback to be in range 60-7776000')
 
     def validate_falcon(self):
         if self.get('falcon', 'cloud_region') not in self.FALCON_CLOUD_REGIONS:
