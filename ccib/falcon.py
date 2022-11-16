@@ -4,6 +4,7 @@ from falconpy import Intel
 from .config import config
 from .log import log
 from .helper import thousands
+from .version import __version__
 
 
 class ApiError(Exception):
@@ -19,10 +20,11 @@ class FalconAPI():
     }
 
     def __init__(self):
-        client_id = config.get('falcon', 'client_id')
-        client_secret = config.get('falcon', 'client_secret')
-        crowdstrike_url = self.__class__.base_url()
-        self.intel = Intel(client_id=client_id, client_secret=client_secret, base_url=crowdstrike_url)
+        self.intel = Intel(client_id=config.get('falcon', 'client_id'),
+                           client_secret=config.get('falcon', 'client_secret'),
+                           base_url=self.__class__.base_url(),
+                           user_agent=f"chronicle-intel-bridge/{__version__}"
+                           )
 
     @classmethod
     def base_url(cls):
