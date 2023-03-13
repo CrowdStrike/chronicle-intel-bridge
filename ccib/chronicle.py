@@ -21,10 +21,11 @@ class Chronicle:
         self.http_session = requests.AuthorizedSession(self.credentials)
 
     def send_indicators(self, indicators):
+        ts = int(datetime.datetime.utcnow().timestamp() * 1000000)
         batch = [
             {
                 "log_text": json.dumps(i),
-                "ts_epoch_microseconds": int(datetime.datetime.now().timestamp() * 1000)
+                "ts_epoch_microseconds": ts
             }
             for i in indicators
         ]
