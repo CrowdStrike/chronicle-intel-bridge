@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
     falcon = FalconAPI()
     queue = Queue(maxsize=10)
-    chronicle = Chronicle(config.get('chronicle', 'customer_id'), config.get('chronicle', 'service_account'))
+    chronicle = Chronicle(config.get('chronicle', 'customer_id'), config.get('chronicle', 'service_account'),config.get('chronicle','region'))
 
     FalconReaderThread(falcon, queue).start()
     ChronicleWriterThread(queue, chronicle).start()

@@ -10,15 +10,33 @@ from google.oauth2 import service_account
 class Chronicle:
     OAUTH2_SCOPES = ['https://www.googleapis.com/auth/chronicle-backstory',
                      'https://www.googleapis.com/auth/malachite-ingestion']
-    INGEST_ENDPOINT = 'https://malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
+    
 
-    def __init__(self, customer_id, service_account_file):
+    def __init__(self, customer_id, service_account_file,region):
         self.customer_id = customer_id
+        self.region = region
         # Create a credential using Google Developer Service Account Credential and Chronicle # API Scope.
         self.credentials = service_account.Credentials.from_service_account_file(
             service_account_file, scopes=self.OAUTH2_SCOPES)
         # Build an HTTP session to make authorized OAuth requests.
         self.http_session = requests.AuthorizedSession(self.credentials)
+        # https://cloud.google.com/chronicle/docs/reference/search-api#regional_endpoints
+        # https://cloud.google.com/chronicle/docs/reference/ingestion-api#regional_endpoints
+        # select region
+        match self.region:
+            case "EU":
+                self.INGEST_ENDPOINT = 'https://europe-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
+            case "UK":
+                self.INGEST_ENDPOINT = 'https://europe-west2-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'            
+            case "IL":
+                self.INGEST_ENDPOINT = 'https://me-west1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
+            case "AU":
+                self.INGEST_ENDPOINT = 'https://australia-southeast1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'                      
+            case "SG":
+                self.INGEST_ENDPOINT = 'https://asia-southeast1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
+            case _:
+                self.INGEST_ENDPOINT = 'https://malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
+
 
     def send_indicators(self, indicators):
         ts = int(datetime.datetime.utcnow().timestamp() * 1000000)
