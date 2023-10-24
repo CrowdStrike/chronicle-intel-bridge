@@ -2,7 +2,7 @@ import os
 import configparser
 
 
-class FigConfig(configparser.SafeConfigParser):
+class FigConfig(configparser.ConfigParser):
     FALCON_CLOUD_REGIONS = {'us-1', 'us-2', 'eu-1', 'us-gov-1'}
     ENV_DEFAULTS = [
         ['logging', 'level', 'LOG_LEVEL'],
