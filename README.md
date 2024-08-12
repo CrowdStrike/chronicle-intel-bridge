@@ -12,7 +12,7 @@ CrowdStrike to Chronicle Intel Bridge forwards CrowdStrike Falcon Intelligence I
    Make sure only the following permissions are assigned to the key pair:
     * Indicators (Falcon Intelligence): READ
 
- - Obtain Chronicle Service Account file. Your Chronicle Support representative will provide you Chronicle Customer ID and Service Account JSON file. 
+ - Obtain Chronicle Service Account file. Your Chronicle Support representative will provide you Chronicle Customer ID and Service Account JSON file.
 
  - Run the bridge application
 
@@ -56,4 +56,9 @@ CrowdStrike to Chronicle Intel Bridge forwards CrowdStrike Falcon Intelligence I
    ```
 
 ## Statement of Support
-Chronicle Intel Bridge is an open source project, not CrowdStrike product. As such it carries no formal support, expressed or implied.
+
+This project is a community-driven, open source project designed to forward CrowdStrike Falcon Intelligence Indicators to Chronicle.
+
+While not a formal CrowdStrike product, this project is maintained by CrowdStrike and supported in partnership with the open source developer community.
+
+For additional support, please see the [SUPPORT](SUPPORT.md) file.
