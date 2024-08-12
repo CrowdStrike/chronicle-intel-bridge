@@ -8,6 +8,7 @@ from google.oauth2 import service_account
 
 
 class Chronicle:
+    """Chronicle API client."""
     OAUTH2_SCOPES = ['https://www.googleapis.com/auth/chronicle-backstory',
                      'https://www.googleapis.com/auth/malachite-ingestion']
 
@@ -37,6 +38,7 @@ class Chronicle:
                 self.INGEST_ENDPOINT = 'https://malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
 
     def send_indicators(self, indicators):
+        """Send a batch of indicators to Chronicle."""
         ts = int(datetime.datetime.utcnow().timestamp() * 1000000)
         batch = [
             {
@@ -48,6 +50,7 @@ class Chronicle:
         self._send(batch)
 
     def _send(self, entries):
+        """Send a batch of log entries to Chronicle."""
         body = {
             'customer_id': self.customer_id,
             'log_type': "CROWDSTRIKE_IOC",

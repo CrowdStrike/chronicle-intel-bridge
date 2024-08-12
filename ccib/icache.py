@@ -1,8 +1,10 @@
 class ICache:
+    """Cache for indicators."""
     def __init__(self):
         self.cache = {}
 
     def exists(self, indicator):
+        """Check if an indicator exists in the cache."""
         cpy = indicator.copy()
         cpy.pop('last_updated')
 
@@ -18,6 +20,7 @@ class ICache:
         return matches
 
     def _matches(self, iid, indicator):
+        """Check if an indicator matches the cache entry."""
         if iid not in self.cache:
             return False
 
@@ -28,6 +31,7 @@ class ICache:
 
     @classmethod
     def indicators_equal(cls, one, other):
+        """Compare two indicator dictionaries for equality."""
         for k, v in one.items():
             if v != other[k]:
                 if v is None or other[k] is None:

@@ -8,10 +8,12 @@ from .version import __version__
 
 
 class ApiError(Exception):
+    """Exception raised for errors in the CrowdStrike Falcon API."""
     pass
 
 
 class FalconAPI():
+    """CrowdStrike Falcon API client."""
     CLOUD_REGIONS = {
         'us-1': 'api.crowdstrike.com',
         'us-2': 'api.us-2.crowdstrike.com',
@@ -28,10 +30,12 @@ class FalconAPI():
 
     @classmethod
     def base_url(cls):
+        """Return the base URL for the CrowdStrike Falcon API."""
         return 'https://' + cls.CLOUD_REGIONS[config.get('falcon', 'cloud_region')]
 
     @property
     def request_size_limit(self):
+        """The maximum number of indicators to request in a single API call."""
         return 1000
 
     def _fetch_indicators(self, marker):

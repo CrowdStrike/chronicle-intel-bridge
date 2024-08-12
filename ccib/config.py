@@ -3,6 +3,7 @@ import configparser
 
 
 class FigConfig(configparser.ConfigParser):
+    """Configuration class for the Falcon-Chronicle integration"""
     FALCON_CLOUD_REGIONS = {'us-1', 'us-2', 'eu-1', 'us-gov-1'}
     ENV_DEFAULTS = [
         ['logging', 'level', 'LOG_LEVEL'],
@@ -26,6 +27,7 @@ class FigConfig(configparser.ConfigParser):
                 self.set(section, var, value)
 
     def validate(self):
+        """Validate the configuration."""
         for section, var, envvar in self.__class__.ENV_DEFAULTS:
             try:
                 self.get(section, var)
@@ -42,6 +44,7 @@ class FigConfig(configparser.ConfigParser):
             raise Exception('Malformed configuration: expected indicators.initial_sync_lookback to be in range 60-7776000')
 
     def validate_falcon(self):
+        """Validate the Falcon configuration."""
         if self.get('falcon', 'cloud_region') not in self.FALCON_CLOUD_REGIONS:
             raise Exception(
                 f'Malformed configuration: expected falcon.cloud_region to be in {self.FALCON_CLOUD_REGIONS}'
@@ -52,6 +55,7 @@ class FigConfig(configparser.ConfigParser):
             raise Exception('Malformed Configuration: expected chronicle.client_secret to be non-empty')
 
     def validate_chronicle(self):
+        """Validate the Chronicle configuration."""
         if len(self.get('chronicle', 'customer_id')) == 0:
             raise Exception('Malformed Configuration: expected chronicle.customer_id to be non-empty')
 
