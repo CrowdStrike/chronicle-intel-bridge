@@ -10,9 +10,8 @@ from google.oauth2 import service_account
 class Chronicle:
     OAUTH2_SCOPES = ['https://www.googleapis.com/auth/chronicle-backstory',
                      'https://www.googleapis.com/auth/malachite-ingestion']
-    
 
-    def __init__(self, customer_id, service_account_file,region):
+    def __init__(self, customer_id, service_account_file, region):
         self.customer_id = customer_id
         self.region = region
         # Create a credential using Google Developer Service Account Credential and Chronicle # API Scope.
@@ -27,16 +26,15 @@ class Chronicle:
             case "EU":
                 self.INGEST_ENDPOINT = 'https://europe-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
             case "UK":
-                self.INGEST_ENDPOINT = 'https://europe-west2-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'            
+                self.INGEST_ENDPOINT = 'https://europe-west2-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
             case "IL":
                 self.INGEST_ENDPOINT = 'https://me-west1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
             case "AU":
-                self.INGEST_ENDPOINT = 'https://australia-southeast1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'                      
+                self.INGEST_ENDPOINT = 'https://australia-southeast1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
             case "SG":
                 self.INGEST_ENDPOINT = 'https://asia-southeast1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
             case _:
                 self.INGEST_ENDPOINT = 'https://malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
-
 
     def send_indicators(self, indicators):
         ts = int(datetime.datetime.utcnow().timestamp() * 1000000)
