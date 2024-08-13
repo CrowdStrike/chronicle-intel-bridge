@@ -25,17 +25,17 @@ class Chronicle:
         # select region
         match self.region:
             case "EU":
-                self.INGEST_ENDPOINT = 'https://europe-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
+                self.ingest_endpoint = 'https://europe-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
             case "UK":
-                self.INGEST_ENDPOINT = 'https://europe-west2-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
+                self.ingest_endpoint = 'https://europe-west2-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
             case "IL":
-                self.INGEST_ENDPOINT = 'https://me-west1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
+                self.ingest_endpoint = 'https://me-west1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
             case "AU":
-                self.INGEST_ENDPOINT = 'https://australia-southeast1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
+                self.ingest_endpoint = 'https://australia-southeast1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
             case "SG":
-                self.INGEST_ENDPOINT = 'https://asia-southeast1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
+                self.ingest_endpoint = 'https://asia-southeast1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
             case _:
-                self.INGEST_ENDPOINT = 'https://malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
+                self.ingest_endpoint = 'https://malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
 
     def send_indicators(self, indicators):
         """Send a batch of indicators to Chronicle."""
@@ -56,5 +56,5 @@ class Chronicle:
             'log_type': "CROWDSTRIKE_IOC",
             'entries': entries,
         }
-        response = self.http_session.post(self.INGEST_ENDPOINT, json=body)
+        response = self.http_session.post(self.ingest_endpoint, json=body)
         response.raise_for_status()
