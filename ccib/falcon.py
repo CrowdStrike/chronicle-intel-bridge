@@ -7,11 +7,6 @@ from .helper import thousands
 from .version import __version__
 
 
-class ApiError(Exception):
-    """Exception raised for errors in the CrowdStrike Falcon API."""
-    pass
-
-
 class FalconAPI():
     """CrowdStrike Falcon API client."""
     CLOUD_REGIONS = {
