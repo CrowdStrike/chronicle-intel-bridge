@@ -11,10 +11,9 @@ if __name__ == "__main__":
     log.info("Starting CrowdStrike Chronicle Intel Bridge %s", __version__)
 
     config.validate()
-
     falcon = FalconAPI()
     queue = Queue(maxsize=10)
-    chronicle = Chronicle(config.get('chronicle', 'customer_id'), config.get('chronicle', 'service_account'),config.get('chronicle','region'))
+    chronicle = Chronicle(config.get('chronicle', 'customer_id'), config.get('chronicle', 'service_account'), config.get('chronicle', 'region'))
 
     FalconReaderThread(falcon, queue).start()
     ChronicleWriterThread(queue, chronicle).start()

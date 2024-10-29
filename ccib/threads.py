@@ -6,6 +6,7 @@ from .log import log
 
 
 def transform(indicator):
+    """Transform an indicator dictionary for comparison."""
     indicator.pop('_marker')
     for label in indicator.get('labels', []):
         label.pop('last_valid_on')
@@ -15,6 +16,7 @@ def transform(indicator):
 
 
 class FalconReaderThread(threading.Thread):
+    """Thread that reads indicators from Falcon."""
     def __init__(self, falcon, queue, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.falcon = falcon
@@ -22,6 +24,7 @@ class FalconReaderThread(threading.Thread):
         self.frequency = int(config.get('indicators', 'sync_frequency'))
 
     def run(self):
+        """Read indicators from Falcon and put them in the queue."""
         ts = time.time() - int(config.get('indicators', 'initial_sync_lookback'))
 
         while True:
@@ -45,6 +48,7 @@ class FalconReaderThread(threading.Thread):
 
 
 class ChronicleWriterThread(threading.Thread):
+    """Thread that sends indicators to Chronicle."""
     def __init__(self, queue, chronicle, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.queue = queue

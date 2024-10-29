@@ -2,32 +2,65 @@ name: Python Lint
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  build:
+  flake8:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.x']
+        python-version: ["3.x"]
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install -e .[devel]
-    - name: Lint with flake8
-      run: |
-        flake8 ccib
-    - name: Lint with pylint
-      run: |
-        pylint ccib
-    - name: Lint with bandit
-      run: |
-        bandit  -l -i -r ccib
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install -e .[devel]
+      - name: Lint with flake8
+        run: |
+          flake8 ccib
+
+  pylint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.x"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install -e .[devel]
+      - name: Lint with pylint
+        run: |
+          pylint ccib
+
+  bandit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.x"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install -e .[devel]
+
+      - name: Lint with bandit
+        run: |
+          bandit  -l -i -r ccib
