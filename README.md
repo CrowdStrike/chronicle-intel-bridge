@@ -55,16 +55,20 @@ Please refer to the [config.ini](./config/config.ini) file for advanced configur
 
 ### Developer instructions
 
-- Build container
+If you want to build the container locally:
 
-   ```bash
-   docker build . -t ccib:latest
-   ```
+1. Clone the repository
+1. Make any changes (ie `config.ini`) needed
+1. Build container
 
-- Run the Bridge
+    ```bash
+    docker build . -t ccib:latest
+    ```
 
-   ```bash
-   docker run -it --rm \
+1. Run the Bridge
+
+    ```bash
+    docker run -it --rm \
           -e FALCON_CLIENT_ID="$FALCON_CLIENT_ID" \
           -e FALCON_CLIENT_SECRET="$FALCON_CLIENT_SECRET" \
           -e FALCON_CLOUD="$FALCON_CLOUD" \
@@ -72,7 +76,7 @@ Please refer to the [config.ini](./config/config.ini) file for advanced configur
           -e GOOGLE_SERVICE_ACCOUNT_FILE=/gcloud/sa.json \
           -v ~/my/path/to/service/account/file/sa.json:/gcloud/ \
           ccib:latest
-   ```
+    ```
 
 ## Statement of Support
 
