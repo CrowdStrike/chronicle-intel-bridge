@@ -1,5 +1,6 @@
 import threading
 import time
+from google.auth.transport import requests
 from .icache import icache
 from .config import config
 from .log import log
@@ -81,7 +82,6 @@ class ChronicleWriterThread(threading.Thread):
                 if i == 5:
                     log.info("Recreating HTTP session...")
                     # Refresh the session to handle potential stale connections
-                    from google.auth.transport import requests
                     self.chronicle.http_session = requests.AuthorizedSession(self.chronicle.credentials)
 
         log.critical("Could not transmit indicators to Chronicle")
