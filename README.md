@@ -17,7 +17,9 @@ CrowdStrike to Chronicle Intel Bridge forwards CrowdStrike Falcon Intelligence I
   >
   > Your Chronicle Support representative should be able to provide you with your Chronicle Customer ID and Service Account JSON file.
 
-## Deployment Instructions
+## Configuration
+
+### Environment Variables
 
 Set the following environment variables:
 
@@ -26,20 +28,19 @@ export FALCON_CLOUD_REGION=YOUR_CLOUD_REGION (e.g., us-1, us-2, eu-1)
 export FALCON_CLIENT_ID=YOUR_CLIENT_ID
 export FALCON_CLIENT_SECRET=YOUR_CLIENT_SECRET
 export CHRONICLE_CUSTOMER_ID=YOUR_CUSTOMER_ID
+export CHRONICLE_REGION=YOUR_CHRONICLE_REGION (optional, defaults to US multi-region)
 ```
 
-Run the bridge application
+### Chronicle Region Configuration
 
-```bash
-docker run -it --rm \
-      -e FALCON_CLIENT_ID="$FALCON_CLIENT_ID" \
-      -e FALCON_CLIENT_SECRET="$FALCON_CLIENT_SECRET" \
-      -e FALCON_CLOUD="$FALCON_CLOUD" \
-      -e CHRONICLE_CUSTOMER_ID="$CHRONICLE_CUSTOMER_ID" \
-      -e GOOGLE_SERVICE_ACCOUNT_FILE=/gcloud/sa.json \
-      -v ~/my/path/to/service/account/file/sa.json:/gcloud/ \
-      quay.io/crowdstrike/chronicle-intel-bridge:latest
-```
+The `CHRONICLE_REGION` environment variable specifies which Chronicle regional endpoint to use. The following values are supported:
+
+- **Legacy region codes**: EU, UK, IL, AU, SG
+- **Google Cloud region codes**: US, EUROPE, EUROPE-WEST2, EUROPE-WEST3, EUROPE-WEST6, EUROPE-WEST9, EUROPE-WEST12, ME-WEST1, ME-CENTRAL1, ME-CENTRAL2, ASIA-SOUTH1, ASIA-SOUTHEAST1, ASIA-NORTHEAST1, AUSTRALIA-SOUTHEAST1, SOUTHAMERICA-EAST1, NORTHAMERICA-NORTHEAST2
+- If not specified or if an unrecognized value is provided, it defaults to the US multi-region endpoint
+
+> [!NOTE]
+> Region codes are case-insensitive, so "eu", "EU", and "Eu" are all treated the same.
 
 ### Advanced Configuration
 
@@ -50,8 +51,43 @@ Please refer to the [config.ini](./config/config.ini) file for advanced configur
 1. Pass the config file to the container using the volume mount flag:
 
     ```bash
-        -v config.ini:/ccib/config.ini
+    -v /path/to/your/config.ini:/ccib/config.ini:ro
     ```
+
+## Deployment Instructions
+
+Run the bridge application
+
+### Interactive mode (foreground)
+
+```bash
+docker run -it --rm \
+      --name chronicle-intel-bridge \
+      -e FALCON_CLIENT_ID="$FALCON_CLIENT_ID" \
+      -e FALCON_CLIENT_SECRET="$FALCON_CLIENT_SECRET" \
+      -e FALCON_CLOUD_REGION="$FALCON_CLOUD_REGION" \
+      -e CHRONICLE_CUSTOMER_ID="$CHRONICLE_CUSTOMER_ID" \
+      -e CHRONICLE_REGION="$CHRONICLE_REGION" \
+      -e GOOGLE_SERVICE_ACCOUNT_FILE=/gcloud/sa.json \
+      -v /path/to/your/service-account.json:/gcloud/sa.json:ro \
+      quay.io/crowdstrike/chronicle-intel-bridge:latest
+```
+
+### Detached mode (background with restart policy)
+
+```bash
+docker run -d --restart unless-stopped \
+      --name chronicle-intel-bridge \
+      -e FALCON_CLIENT_ID="$FALCON_CLIENT_ID" \
+      -e FALCON_CLIENT_SECRET="$FALCON_CLIENT_SECRET" \
+      -e FALCON_CLOUD_REGION="$FALCON_CLOUD_REGION" \
+      -e CHRONICLE_CUSTOMER_ID="$CHRONICLE_CUSTOMER_ID" \
+      -e CHRONICLE_REGION="$CHRONICLE_REGION" \
+      -e GOOGLE_SERVICE_ACCOUNT_FILE=/gcloud/sa.json \
+      -v /path/to/your/service-account.json:/gcloud/sa.json:ro \
+      quay.io/crowdstrike/chronicle-intel-bridge:latest
+```
+
 
 ### Developer instructions
 
@@ -67,15 +103,34 @@ If you want to build the container locally:
 
 1. Run the Bridge
 
+    **Interactive mode (foreground)**
+
     ```bash
     docker run -it --rm \
-          -e FALCON_CLIENT_ID="$FALCON_CLIENT_ID" \
-          -e FALCON_CLIENT_SECRET="$FALCON_CLIENT_SECRET" \
-          -e FALCON_CLOUD="$FALCON_CLOUD" \
-          -e CHRONICLE_CUSTOMER_ID="$CHRONICLE_CUSTOMER_ID" \
-          -e GOOGLE_SERVICE_ACCOUNT_FILE=/gcloud/sa.json \
-          -v ~/my/path/to/service/account/file/sa.json:/gcloud/ \
-          ccib:latest
+        --name chronicle-intel-bridge \
+        -e FALCON_CLIENT_ID="$FALCON_CLIENT_ID" \
+        -e FALCON_CLIENT_SECRET="$FALCON_CLIENT_SECRET" \
+        -e FALCON_CLOUD_REGION="$FALCON_CLOUD_REGION" \
+        -e CHRONICLE_CUSTOMER_ID="$CHRONICLE_CUSTOMER_ID" \
+        -e CHRONICLE_REGION="$CHRONICLE_REGION" \
+        -e GOOGLE_SERVICE_ACCOUNT_FILE=/gcloud/sa.json \
+        -v /path/to/your/service-account.json:/gcloud/sa.json:ro \
+        ccib:latest
+    ```
+
+    **Detached mode (background with restart policy)**
+
+    ```bash
+    docker run -d --restart unless-stopped \
+        --name chronicle-intel-bridge \
+        -e FALCON_CLIENT_ID="$FALCON_CLIENT_ID" \
+        -e FALCON_CLIENT_SECRET="$FALCON_CLIENT_SECRET" \
+        -e FALCON_CLOUD_REGION="$FALCON_CLOUD_REGION" \
+        -e CHRONICLE_CUSTOMER_ID="$CHRONICLE_CUSTOMER_ID" \
+        -e CHRONICLE_REGION="$CHRONICLE_REGION" \
+        -e GOOGLE_SERVICE_ACCOUNT_FILE=/gcloud/sa.json \
+        -v /path/to/your/service-account.json:/gcloud/sa.json:ro \
+        ccib:latest
     ```
 
 ## Statement of Support
