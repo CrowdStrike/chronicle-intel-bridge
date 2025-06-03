@@ -56,5 +56,10 @@ class Chronicle:
             'log_type': "CROWDSTRIKE_IOC",
             'entries': entries,
         }
-        response = self.http_session.post(self.ingest_endpoint, json=body)
+        # Add explicit timeouts to prevent hanging connections
+        response = self.http_session.post(
+            self.ingest_endpoint,
+            json=body,
+            timeout=(10, 30)  # (connect timeout, read timeout) in seconds
+        )
         response.raise_for_status()

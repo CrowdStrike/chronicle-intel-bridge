@@ -1,5 +1,6 @@
 import threading
 import time
+from google.auth.transport import requests
 from .icache import icache
 from .config import config
 from .log import log
@@ -71,6 +72,16 @@ class ChronicleWriterThread(threading.Thread):
                 self.chronicle.send_indicators(batch)
                 return
             except Exception:  # pylint: disable=W0703
-                log.exception("Error occurred while processing indicators batch")
-                time.sleep(i)
+                log.exception("Error occurred while processing indicators batch (attempt %d/30)", i+1)
+                # Use exponential backoff with a maximum delay of 60 seconds
+                backoff_seconds = min(2 ** i, 60)
+                log.info("Retrying in %d seconds...", backoff_seconds)
+                time.sleep(backoff_seconds)
+
+                # For persistent failures, recreate the session
+                if i == 5:
+                    log.info("Recreating HTTP session...")
+                    # Refresh the session to handle potential stale connections
+                    self.chronicle.http_session = requests.AuthorizedSession(self.chronicle.credentials)
+
         log.critical("Could not transmit indicators to Chronicle")
