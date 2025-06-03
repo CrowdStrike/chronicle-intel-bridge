@@ -1,0 +1,46 @@
+# Chronicle Intel Bridge (CCIB) Test Dockerfile
+# Purpose: Used for testing, particularly network disruption testing that requires iptables
+
+# Pin to specific version for reproducibility
+FROM docker.io/python:3.12-slim-bookworm
+
+# Add metadata
+LABEL maintainer="CrowdStrike"
+LABEL description="Chronicle Intel Bridge Test Container"
+LABEL version="1.0"
+
+# Install iptables for network disruption testing
+# Best practices for apt-get:
+# 1. Update and install in the same layer to prevent caching of outdated package lists
+# 2. Clean up apt cache to reduce image size
+# 3. Use --no-install-recommends to minimize installed packages
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    iptables \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /ccib
+
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
+
+# Install dependencies with version pinning
+# Using --no-cache-dir reduces the image size
+RUN pip install --no-cache-dir -r ./requirements.txt
+
+# Copy test files
+# This is separated from the main copy to improve layer caching
+COPY test_*.py ./
+COPY ccib ./ccib/
+COPY config ./config/
+
+# Add a healthcheck to verify the container is still working
+# This checks if Python is responsive every 30 seconds
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import sys; sys.exit(0)"
+
+# Note: We're not switching to ccibuser since we need root for iptables
+# The tail command keeps the container running indefinitely so tests can be executed
+# against it using docker exec commands
+CMD ["tail", "-f", "/dev/null"]
