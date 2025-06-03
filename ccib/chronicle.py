@@ -23,19 +23,41 @@ class Chronicle:
         # https://cloud.google.com/chronicle/docs/reference/search-api#regional_endpoints
         # https://cloud.google.com/chronicle/docs/reference/ingestion-api#regional_endpoints
         # select region
-        match self.region:
-            case "EU":
-                self.ingest_endpoint = 'https://europe-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
-            case "UK":
-                self.ingest_endpoint = 'https://europe-west2-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
-            case "IL":
-                self.ingest_endpoint = 'https://me-west1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
-            case "AU":
-                self.ingest_endpoint = 'https://australia-southeast1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
-            case "SG":
-                self.ingest_endpoint = 'https://asia-southeast1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
-            case _:
-                self.ingest_endpoint = 'https://malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate'
+
+        # Map region codes to their endpoints
+        # Make region case-insensitive
+        region_upper = self.region.upper() if self.region else ""
+
+        # Map of region codes to their endpoints
+        region_endpoints = {
+            # Legacy region codes
+            "EU": "https://europe-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "UK": "https://europe-west2-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "IL": "https://me-west1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "AU": "https://australia-southeast1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "SG": "https://asia-southeast1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+
+            # New region codes based on Google Cloud regions
+            "US": "https://malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "EUROPE": "https://europe-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "EUROPE-WEST2": "https://europe-west2-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "EUROPE-WEST3": "https://europe-west3-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "EUROPE-WEST6": "https://europe-west6-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "EUROPE-WEST9": "https://europe-west9-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "EUROPE-WEST12": "https://europe-west12-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "ME-WEST1": "https://me-west1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "ME-CENTRAL1": "https://me-central1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "ME-CENTRAL2": "https://me-central2-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "ASIA-SOUTH1": "https://asia-south1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "ASIA-SOUTHEAST1": "https://asia-southeast1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "ASIA-NORTHEAST1": "https://asia-northeast1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "AUSTRALIA-SOUTHEAST1": "https://australia-southeast1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "SOUTHAMERICA-EAST1": "https://southamerica-east1-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+            "NORTHAMERICA-NORTHEAST2": "https://northamerica-northeast2-malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate",
+        }
+
+        # Default to US multi-region if region is not specified or not recognized
+        self.ingest_endpoint = region_endpoints.get(region_upper, "https://malachiteingestion-pa.googleapis.com/v2/unstructuredlogentries:batchCreate")
 
     def send_indicators(self, indicators):
         """Send a batch of indicators to Chronicle."""
