@@ -1,7 +1,10 @@
+from .log import log
+
 class ICache:
     """Cache for indicators."""
     def __init__(self):
         self.cache = {}
+        log.debug("Initialized indicator cache")
 
     def exists(self, indicator):
         """Check if an indicator exists in the cache."""
