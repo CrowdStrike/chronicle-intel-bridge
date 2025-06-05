@@ -1,5 +1,6 @@
 from .log import log
 
+
 class ICache:
     """Cache for indicators."""
     def __init__(self):
