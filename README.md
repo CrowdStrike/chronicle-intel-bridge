@@ -88,7 +88,6 @@ docker run -d --restart unless-stopped \
       quay.io/crowdstrike/chronicle-intel-bridge:latest
 ```
 
-
 ### Developer instructions
 
 If you want to build the container locally:

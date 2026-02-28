@@ -12,7 +12,8 @@ class FigConfig(configparser.ConfigParser):
         ['falcon', 'client_secret', 'FALCON_CLIENT_SECRET'],
         ['chronicle', 'service_account', 'GOOGLE_SERVICE_ACCOUNT_FILE'],
         ['chronicle', 'customer_id', 'CHRONICLE_CUSTOMER_ID'],
-        ['chronicle', 'region', 'CHRONICLE_REGION']
+        ['chronicle', 'region', 'CHRONICLE_REGION'],
+        ['icache', 'max_size', 'ICACHE_MAX_SIZE'],
     ]
 
     def __init__(self):
