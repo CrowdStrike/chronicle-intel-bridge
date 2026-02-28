@@ -20,17 +20,12 @@ class ICache:
         iid = cpy.pop('id')
 
         matches = self._matches(iid, cpy)
-        if matches:
-            log.debug("Cache hit for indicator %s", iid)
-        else:
-            log.debug("Cache miss for indicator %s", iid)
         self.cache[iid] = cpy
         return matches
 
     def _matches(self, iid, indicator):
         """Check if an indicator matches the cache entry."""
         if iid not in self.cache:
-            log.debug("New indicator %s (not in cache)", iid)
             return False
 
         if self.cache[iid] == indicator:
