@@ -125,10 +125,7 @@ class ChronicleWriterThread(threading.Thread):
                 # For persistent failures, recreate the session
                 if i == 5:
                     log.info("Recreating HTTP session...")
-                    log.debug("Recreating HTTP session after 5 failed attempts")
                     # Refresh the session to handle potential stale connections
                     self.chronicle.http_session = requests.AuthorizedSession(self.chronicle.credentials)
-                    log.debug("HTTP session recreated")
 
         log.critical("Could not transmit indicators to Chronicle")
-        log.debug("Failed to send batch after 30 attempts, giving up")
