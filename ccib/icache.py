@@ -1,7 +1,16 @@
+import time
+
+
 class ICache:
     """Cache for indicators."""
     def __init__(self):
         self.cache = {}
+
+    def purge_before(self, timestamp):
+        """Remove cache entries older than timestamp."""
+        to_remove = [iid for iid, (_, ts) in self.cache.items() if ts < timestamp]
+        for iid in to_remove:
+            del self.cache[iid]
 
     def exists(self, indicator):
         """Check if an indicator exists in the cache."""
@@ -16,7 +25,7 @@ class ICache:
         iid = cpy.pop('id')
 
         matches = self._matches(iid, cpy)
-        self.cache[iid] = cpy
+        self.cache[iid] = (cpy, time.time())
         return matches
 
     def _matches(self, iid, indicator):
@@ -24,10 +33,12 @@ class ICache:
         if iid not in self.cache:
             return False
 
-        if self.cache[iid] == indicator:
+        cached_indicator, _ = self.cache[iid]
+
+        if cached_indicator == indicator:
             return True
 
-        return self.__class__.indicators_equal(self.cache[iid], indicator)
+        return self.__class__.indicators_equal(cached_indicator, indicator)
 
     @classmethod
     def indicators_equal(cls, one, other):
