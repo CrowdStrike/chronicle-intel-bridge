@@ -66,7 +66,7 @@ class FalconReaderThread(threading.Thread):
                 log.debug("Batch statistics - received: %d, sent: %d, skipped: %d",
                           bsize, ssize, bsize - ssize)
 
-            log.info("Statistics: %s", stats)
+            log.info("Statistics: %s | Cache: %s", stats, icache.get_stats())
             log.debug("Completed fetch cycle, updating timestamp to: %s", last_check_time)
             ts = last_check_time
 

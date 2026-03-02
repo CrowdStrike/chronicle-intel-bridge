@@ -1,11 +1,17 @@
+import hashlib
+import json
+from collections import OrderedDict
+
 from .log import log
 
 
 class ICache:
     """Cache for indicators."""
-    def __init__(self):
-        self.cache = {}
-        log.debug("Initialized indicator cache")
+    def __init__(self, max_size=None):
+        self.cache = OrderedDict()
+        self.max_size = max_size
+        self.evictions = 0
+        log.debug("Initialized indicator cache (max_size=%s)", max_size)
 
     def exists(self, indicator):
         """Check if an indicator exists in the cache."""
@@ -19,40 +25,36 @@ class ICache:
 
         iid = cpy.pop('id')
 
-        matches = self._matches(iid, cpy)
-        self.cache[iid] = cpy
-        return matches
+        content_hash = hashlib.sha256(
+            json.dumps(cpy, sort_keys=True, default=str).encode()
+        ).hexdigest()
 
-    def _matches(self, iid, indicator):
-        """Check if an indicator matches the cache entry."""
-        if iid not in self.cache:
+        if iid in self.cache:
+            if self.cache[iid] == content_hash:
+                self.cache.move_to_end(iid)
+                return True
+            # Content changed — update hash
+            self.cache[iid] = content_hash
+            self.cache.move_to_end(iid)
             return False
 
-        if self.cache[iid] == indicator:
-            return True
+        self.cache[iid] = content_hash
+        self._evict_if_needed()
+        return False
 
-        return self.__class__.indicators_equal(self.cache[iid], indicator)
+    def _evict_if_needed(self):
+        """Evict oldest entries if cache exceeds max_size."""
+        if self.max_size is None:
+            return
+        while len(self.cache) > self.max_size:
+            self.cache.popitem(last=False)
+            self.evictions += 1
 
-    @classmethod
-    def indicators_equal(cls, one, other):
-        """Compare two indicator dictionaries for equality."""
-        for k, v in one.items():
-            if v != other[k]:
-                if v is None or other[k] is None:
-                    return False
-
-                if isinstance(v, list) and isinstance(other[k], list):
-                    if len(v) != len(other[k]):
-                        return False
-                if k == 'labels':
-                    if set(label['name'] for label in v) != set(label['name'] for label in other[k]):
-                        return False
-                elif k == 'relations':
-                    if set(rel['id'] for rel in v) != set(rel['id'] for rel in other[k]):
-                        return False
-                else:
-                    return False
-        return True
+    def get_stats(self):
+        """Return cache statistics."""
+        return {'size': len(self.cache), 'max_size': self.max_size, 'evictions': self.evictions}
 
 
-icache = ICache()
+from .config import config  # noqa: E402  pylint: disable=C0413
+_max_size_val = int(config.get('icache', 'max_size'))
+icache = ICache(max_size=_max_size_val if _max_size_val > 0 else None)
