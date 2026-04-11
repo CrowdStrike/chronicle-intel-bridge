@@ -68,9 +68,10 @@ class FalconAPI():
                 time.sleep(5)
 
     def get_indicators(self, start_time):
-        """Get all the indicators that were updated after a certain moment in time (UNIX).
+        """Get all the indicators starting from a given marker or UNIX timestamp.
 
-        :param start_time: unix time of the oldest indicator you want to pull
+        :param start_time: _marker string or unix timestamp to resume from
+        :yields: tuple of (indicators_list, last_marker_string)
         """
         log.debug("Starting to fetch indicators updated after timestamp: %s", start_time)
         indicators_in_request = []
@@ -115,7 +116,7 @@ class FalconAPI():
             last_marker = indicators_in_request[-1].get('_marker', '')
             log.debug("Last marker from batch: %s", last_marker)
 
-            yield indicators_in_request
+            yield indicators_in_request, last_marker
 
             if last_marker == '':
                 log.debug("No more markers available, ending fetch cycle")

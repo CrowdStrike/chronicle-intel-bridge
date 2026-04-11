@@ -4,6 +4,7 @@ from google.auth.transport import requests
 from .icache import icache
 from .config import config
 from .log import log
+from .state import save_state
 
 
 def transform(indicator):
@@ -18,18 +19,24 @@ def transform(indicator):
 
 class FalconReaderThread(threading.Thread):
     """Thread that reads indicators from Falcon."""
-    def __init__(self, falcon, queue, *args, **kwargs):
+    def __init__(self, falcon, queue, *args, resume_marker=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.falcon = falcon
         self.queue = queue
         self.frequency = int(config.get('indicators', 'sync_frequency'))
+        self.resume_marker = resume_marker
 
     def run(self):
         """Read indicators from Falcon and put them in the queue."""
         initial_lookback = int(config.get('indicators', 'initial_sync_lookback'))
-        ts = time.time() - initial_lookback
-        log.debug("Starting FalconReaderThread with initial lookback of %d seconds (timestamp: %s)",
-                  initial_lookback, ts)
+
+        if self.resume_marker is not None:
+            ts = self.resume_marker
+            log.info("Resuming from saved marker: %s", ts)
+        else:
+            ts = time.time() - initial_lookback
+            log.debug("Starting FalconReaderThread with initial lookback of %d seconds (timestamp: %s)",
+                      initial_lookback, ts)
 
         while True:
             log.debug("Starting new indicator fetch cycle")
@@ -37,8 +44,11 @@ class FalconReaderThread(threading.Thread):
             log.debug("Current time: %s", last_check_time)
 
             stats = {'received': 0, 'skipped': 0, 'sent': 0}
-            for batch in self.falcon.get_indicators(ts):
+            last_marker_seen = None
+            for batch, last_marker in self.falcon.get_indicators(ts):
                 log.debug("Processing batch of %d indicators", len(batch))
+                if last_marker:
+                    last_marker_seen = last_marker
 
                 # Transform and check cache for each indicator - reduce per-indicator logging
                 to_be_sent = []
@@ -67,8 +77,13 @@ class FalconReaderThread(threading.Thread):
                           bsize, ssize, bsize - ssize)
 
             log.info("Statistics: %s | Cache: %s", stats, icache.get_stats())
-            log.debug("Completed fetch cycle, updating timestamp to: %s", last_check_time)
-            ts = last_check_time
+            ts = last_marker_seen if last_marker_seen is not None else last_check_time
+            log.debug("Completed fetch cycle, next resume point: %s", ts)
+
+            try:
+                save_state({'last_marker': ts})
+            except Exception:  # pylint: disable=W0718
+                log.exception("Failed to save state file")
 
             log.debug("Sleeping for %d seconds before next fetch cycle", self.frequency)
             time.sleep(self.frequency)

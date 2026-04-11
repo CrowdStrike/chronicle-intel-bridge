@@ -73,13 +73,11 @@ class Chronicle:
     def send_indicators(self, indicators):
         """Send a batch of indicators to Chronicle."""
         log.debug("Preparing to send %d indicators to Chronicle", len(indicators))
-        ts = int(datetime.datetime.utcnow().timestamp() * 1000000)
-        log.debug("Using timestamp: %d microseconds", ts)
 
         batch = [
             {
                 "log_text": json.dumps(i),
-                "ts_epoch_microseconds": ts
+                "ts_epoch_microseconds": self._indicator_ts(i)
             }
             for i in indicators
         ]
@@ -90,6 +88,21 @@ class Chronicle:
                       indicators[0].get('id', 'unknown'))
 
         self._send(batch)
+
+    @staticmethod
+    def _indicator_ts(indicator):
+        """Return epoch-microsecond timestamp from the indicator's published_date
+        or last_updated field. Falls back to current UTC time if neither is usable."""
+        for field in ('published_date', 'last_updated'):
+            raw = indicator.get(field)
+            if not raw:
+                continue
+            try:
+                # Falcon timestamps are Unix epoch seconds (int)
+                return int(float(raw) * 1_000_000)
+            except (ValueError, TypeError):
+                pass
+        return int(datetime.datetime.utcnow().timestamp() * 1_000_000)
 
     def _send(self, entries):
         """Send a batch of log entries to Chronicle."""
