@@ -13,7 +13,7 @@ RUN pip install -r ./requirements.txt
 
 COPY . .
 
-RUN mkdir -p /ccib/data && chown ccibuser:ccibuser /ccib/data
+RUN mkdir -p /ccib/data && chown -R ccibuser:ccibuser /ccib/data
 VOLUME /ccib/data
 
 USER ccibuser
