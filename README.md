@@ -42,6 +42,16 @@ The `CHRONICLE_REGION` environment variable specifies which Chronicle regional e
 > [!NOTE]
 > Region codes are case-insensitive, so "eu", "EU", and "Eu" are all treated the same.
 
+### State Persistence
+
+The bridge tracks its position in the CrowdStrike Falcon indicator feed using the API's opaque `_marker` cursor, saved to `data/state.json`. This allows the bridge to resume exactly where it left off after a container restart without gaps or duplicates. To enable persistence across restarts, mount a Docker volume to `/ccib/data`:
+
+```bash
+-v ccib-state:/ccib/data
+```
+
+Without the volume mount, the bridge still functions but will re-fetch from the `initial_sync_lookback` window on every restart. The in-memory deduplication cache (ICache) ensures any overlap during re-fetch does not produce duplicate indicators in Chronicle. The state file path can be overridden with the `STATE_FILE` environment variable.
+
 ### Advanced Configuration
 
 Please refer to the [config.ini](./config/config.ini) file for advanced configuration options and customization.
@@ -70,6 +80,7 @@ docker run -it --rm \
       -e CHRONICLE_REGION="$CHRONICLE_REGION" \
       -e GOOGLE_SERVICE_ACCOUNT_FILE=/gcloud/sa.json \
       -v /path/to/your/service-account.json:/gcloud/sa.json:ro \
+      -v ccib-state:/ccib/data \
       quay.io/crowdstrike/chronicle-intel-bridge:latest
 ```
 
@@ -85,6 +96,7 @@ docker run -d --restart unless-stopped \
       -e CHRONICLE_REGION="$CHRONICLE_REGION" \
       -e GOOGLE_SERVICE_ACCOUNT_FILE=/gcloud/sa.json \
       -v /path/to/your/service-account.json:/gcloud/sa.json:ro \
+      -v ccib-state:/ccib/data \
       quay.io/crowdstrike/chronicle-intel-bridge:latest
 ```
 
@@ -114,6 +126,7 @@ If you want to build the container locally:
         -e CHRONICLE_REGION="$CHRONICLE_REGION" \
         -e GOOGLE_SERVICE_ACCOUNT_FILE=/gcloud/sa.json \
         -v /path/to/your/service-account.json:/gcloud/sa.json:ro \
+        -v ccib-state:/ccib/data \
         ccib:latest
     ```
 
@@ -129,6 +142,7 @@ If you want to build the container locally:
         -e CHRONICLE_REGION="$CHRONICLE_REGION" \
         -e GOOGLE_SERVICE_ACCOUNT_FILE=/gcloud/sa.json \
         -v /path/to/your/service-account.json:/gcloud/sa.json:ro \
+        -v ccib-state:/ccib/data \
         ccib:latest
     ```
 

@@ -13,6 +13,9 @@ RUN pip install -r ./requirements.txt
 
 COPY . .
 
+RUN mkdir -p /ccib/data && chown -R ccibuser:ccibuser /ccib/data
+VOLUME /ccib/data
+
 USER ccibuser
 
 CMD [ "python3", "-m" , "ccib"]

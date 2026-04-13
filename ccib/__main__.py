@@ -3,6 +3,7 @@ from .falcon import FalconAPI
 from .config import config
 from .log import log
 from .chronicle import Chronicle
+from .state import load_state
 from .threads import FalconReaderThread, ChronicleWriterThread
 from . import __version__
 
@@ -24,8 +25,15 @@ if __name__ == "__main__":
               config.get('chronicle', 'customer_id'),
               config.get('chronicle', 'region') or "US (default)")
 
+    saved_state = load_state()
+    resume_marker = saved_state.get('last_marker') if saved_state else None
+    if resume_marker is not None:
+        log.info("Resuming from saved marker: %s", resume_marker)
+    else:
+        log.info("No saved state, will use initial_sync_lookback")
+
     log.debug("Starting Falcon Reader Thread")
-    FalconReaderThread(falcon, queue).start()
+    FalconReaderThread(falcon, queue, resume_marker=resume_marker).start()
 
     log.debug("Starting Chronicle Writer Thread")
     ChronicleWriterThread(queue, chronicle).start()

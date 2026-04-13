@@ -14,7 +14,9 @@ class FigConfig(configparser.ConfigParser):
         ['chronicle', 'customer_id', 'CHRONICLE_CUSTOMER_ID'],
         ['chronicle', 'region', 'CHRONICLE_REGION'],
         ['icache', 'max_size', 'ICACHE_MAX_SIZE'],
+        ['state', 'file', 'STATE_FILE'],
     ]
+    OPTIONAL_CONFIGS = {('state', 'file')}
 
     def __init__(self):
         super().__init__()
@@ -30,6 +32,8 @@ class FigConfig(configparser.ConfigParser):
     def validate(self):
         """Validate the configuration."""
         for section, var, envvar in self.__class__.ENV_DEFAULTS:
+            if (section, var) in self.__class__.OPTIONAL_CONFIGS:
+                continue
             try:
                 self.get(section, var)
             except configparser.NoOptionError as err:
