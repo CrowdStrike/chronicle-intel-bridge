@@ -40,12 +40,17 @@ class FalconAPI():
     def _fetch_indicators(self, marker):
         while True:
             try:
+                if isinstance(marker, (int, float)):
+                    filter_expr = f"last_updated:>={int(marker)}+deleted:false"
+                else:
+                    filter_expr = f"_marker:>='{marker}'+deleted:false"
+
                 log.debug("Fetching indicators from Falcon API with marker: %s, limit: %d",
                           marker, self.request_size_limit)
 
                 resp_json = self.intel.query_indicator_entities(
                     sort="_marker.asc",
-                    filter=f"_marker:>='{marker}'+deleted:false",
+                    filter=filter_expr,
                     limit=self.request_size_limit,
                     include_deleted=False
                 )
