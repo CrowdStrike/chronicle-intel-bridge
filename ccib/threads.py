@@ -17,6 +17,13 @@ def transform(indicator):
     return indicator
 
 
+def _try_save_state(marker):
+    try:
+        save_state({'last_marker': marker})
+    except Exception:  # pylint: disable=W0718
+        log.exception("Failed to save state file")
+
+
 class FalconReaderThread(threading.Thread):
     """Thread that reads indicators from Falcon."""
     def __init__(self, falcon, queue, *args, resume_marker=None, **kwargs):
@@ -64,8 +71,9 @@ class FalconReaderThread(threading.Thread):
                 if skipped_count > 0:
                     log.debug("Skipped %d indicators that already exist in cache", skipped_count)
 
-                log.debug("Putting %d indicators in queue", len(to_be_sent))
-                self.queue.put(to_be_sent)
+                if to_be_sent:
+                    log.debug("Putting %d indicators in queue", len(to_be_sent))
+                    self.queue.put((to_be_sent, last_marker))
 
                 # statistics
                 bsize = len(batch)
@@ -79,11 +87,6 @@ class FalconReaderThread(threading.Thread):
             log.info("Statistics: %s | Cache: %s", stats, icache.get_stats())
             ts = last_marker_seen if last_marker_seen is not None else last_check_time
             log.debug("Completed fetch cycle, next resume point: %s", ts)
-
-            try:
-                save_state({'last_marker': ts})
-            except Exception:  # pylint: disable=W0718
-                log.exception("Failed to save state file")
 
             log.debug("Sleeping for %d seconds before next fetch cycle", self.frequency)
             time.sleep(self.frequency)
@@ -100,11 +103,11 @@ class ChronicleWriterThread(threading.Thread):
         log.debug("Starting ChronicleWriterThread")
         while True:
             log.debug("Waiting for indicators from queue")
-            indicators = self.queue.get()
+            indicators, marker = self.queue.get()
             log.debug("Got %d indicators from queue", len(indicators))
-            self._send_indicators(indicators)
+            self._send_indicators(indicators, marker)
 
-    def _send_indicators(self, indicators):
+    def _send_indicators(self, indicators, marker):
         count = len(indicators)
         log.debug("Processing %d indicators for sending to Chronicle", count)
 
@@ -118,7 +121,11 @@ class ChronicleWriterThread(threading.Thread):
             batch = indicators[i:i + batch_size]
             log.debug("Sending batch %d/%d with %d indicators",
                       (i // batch_size) + 1, num_batches, len(batch))
-            self._send_indicators_batch(batch)
+            if not self._send_indicators_batch(batch):
+                return
+
+        if marker:
+            _try_save_state(marker)
 
     def _send_indicators_batch(self, batch):
         log.debug("Attempting to send batch of %d indicators to Chronicle", len(batch))
@@ -128,7 +135,7 @@ class ChronicleWriterThread(threading.Thread):
                 log.debug("Sending batch to Chronicle (attempt %d/30)", i+1)
                 self.chronicle.send_indicators(batch)
                 log.debug("Successfully sent batch to Chronicle")
-                return
+                return True
             except Exception:  # pylint: disable=W0703
                 log.exception("Error occurred while processing indicators batch (attempt %d/30)", i+1)
                 # Use exponential backoff with a maximum delay of 60 seconds
@@ -144,3 +151,4 @@ class ChronicleWriterThread(threading.Thread):
                     self.chronicle.http_session = requests.AuthorizedSession(self.chronicle.credentials)
 
         log.critical("Could not transmit indicators to Chronicle")
+        return False
