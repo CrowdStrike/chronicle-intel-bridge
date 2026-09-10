@@ -1,0 +1,61 @@
+# CCIB configuration.
+#
+# Every option below has a built-in default and can also be set with a
+# command-line flag or an environment variable. Precedence, highest first:
+# flag > environment variable > this file > built-in default. Run `ccib --help`
+# for the full list of flags and their defaults.
+
+logging:
+  # Uncomment to request logging level (ERROR, WARN, INFO, DEBUG). Alternatively, use
+  # LOG_LEVEL env variable.
+  #level: DEBUG
+
+  # Uncomment to choose the log output format (text or json). Default value: text.
+  # Alternatively, use the LOG_FORMAT env variable.
+  #format: json
+
+indicators:
+  # Uncomment to provide indicators sync frequency (in seconds). Default value: 60
+  #sync_frequency:
+
+  # Uncomment to define look back period for initial sync upon start-up (in seconds). Default value: 14400 (equals to 4 hours)
+  #initial_sync_lookback:
+
+falcon:
+  # Uncomment to provide Falcon Cloud. Alternatively, use FALCON_CLOUD env variable.
+  #cloud: us-1
+
+  # Uncomment to provide OAuth Client ID. Alternatively, use FALCON_CLIENT_ID env variable.
+  #client_id: ABCD
+
+  # Uncomment to provide OAuth Secret. Alternatively, use FALCON_CLIENT_SECRET env variable.
+  #client_secret: ABCD
+
+chronicle:
+  # Chronicle configuration
+
+  # Uncomment to provide Google Service Account filepath. Alternatively, use GOOGLE_SERVICE_ACCOUNT_FILE variable
+  #service_account: apikeys-demo.json
+
+  # Uncomment to provide Chronicle Customer ID. Alternatively, use CHRONICLE_CUSTOMER_ID variable
+  #customer_id: XXX
+
+  # Uncomment to provide Chronicle region. Alternatively, use CHRONICLE_REGION variable.
+  # Supported values:
+  # - Legacy region codes: EU, UK, IL, AU, SG
+  # - Google Cloud region codes: US, EUROPE, EUROPE-WEST2, EUROPE-WEST3, EUROPE-WEST6, EUROPE-WEST9, EUROPE-WEST12,
+  #   ME-WEST1, ME-CENTRAL1, ME-CENTRAL2, ASIA-SOUTH1, ASIA-SOUTHEAST1, ASIA-NORTHEAST1, AUSTRALIA-SOUTHEAST1,
+  #   SOUTHAMERICA-EAST1, NORTHAMERICA-NORTHEAST2
+  # - If not specified or if an unrecognized value is provided, defaults to US multi-region
+  # - Region codes are case-insensitive
+  #region:
+
+cache:
+  # Uncomment to cap the in-memory dedup cache (number of entries; <= 0 means
+  # unbounded). Alternatively, use CACHE_MAX_SIZE env variable. Default value: 100000
+  #max_size:
+
+state:
+  # Uncomment to change where the resume-marker state file is written.
+  # Alternatively, use STATE_FILE env variable. Default value: data/state.json
+  #file:

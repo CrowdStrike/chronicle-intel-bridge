@@ -1,0 +1,38 @@
+name: license check
+
+on:
+  pull_request:
+    paths-ignore:
+      - "README.md"
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "README.md"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: "go.mod"
+          cache: false
+
+      - name: Ensure license is added to go files
+        run: |
+          make license
+          if [[ -n $(git status -s) ]] ; then
+            echo
+            echo -e "\e[31mThere are source code files with missing license headers."
+            echo -e "\e[31mEnsure to include the license to the header of any source code in this PR."
+            echo -e "\e[31mThis is usually done by running 'make license'\e[0m"
+            git status -s
+            git diff --color
+            exit 1
+          fi
