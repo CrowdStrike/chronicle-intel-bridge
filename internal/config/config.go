@@ -52,6 +52,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
+	"github.com/crowdstrike/chronicle-intel-bridge/internal/chronicle"
 	"github.com/crowdstrike/chronicle-intel-bridge/internal/falcon"
 )
 
@@ -80,6 +81,7 @@ const (
 	keyChronicleServiceAccount = "chronicle.service_account"
 	keyChronicleCustomerID     = "chronicle.customer_id"
 	keyChronicleRegion         = "chronicle.region"
+	keyChronicleProject        = "chronicle.project"
 	keyCacheMaxSize            = "cache.max_size"
 	keyStateFile               = "state.file"
 )
@@ -120,6 +122,7 @@ var options = []option{
 	{keyChronicleServiceAccount, "chronicle-service-account", "GOOGLE_SERVICE_ACCOUNT_FILE"},
 	{keyChronicleCustomerID, "chronicle-customer-id", "CHRONICLE_CUSTOMER_ID"},
 	{keyChronicleRegion, "chronicle-region", "CHRONICLE_REGION"},
+	{keyChronicleProject, "chronicle-project", "CHRONICLE_PROJECT"},
 	{keyCacheMaxSize, "cache-max-size", "CACHE_MAX_SIZE"},
 	{keyStateFile, "state-file", "STATE_FILE"},
 }
@@ -139,6 +142,7 @@ type Config struct {
 	ChronicleServiceAccount string
 	ChronicleCustomerID     string
 	ChronicleRegion         string
+	ChronicleProject        string
 
 	CacheMaxSize int
 	StateFile    string
@@ -159,6 +163,7 @@ func BindFlags(fs *pflag.FlagSet) {
 	fs.String("chronicle-service-account", "", "path to the Google service account JSON file")
 	fs.String("chronicle-customer-id", "", "Chronicle customer ID")
 	fs.String("chronicle-region", "", "Chronicle region")
+	fs.String("chronicle-project", "", "Google Cloud project linked to the Chronicle instance")
 	fs.Int("cache-max-size", defaultCacheMaxSize, "maximum number of entries in the dedup cache")
 	fs.String("state-file", defaultStateFile, "path to the persisted state file")
 }
@@ -192,6 +197,7 @@ func Load(fs *pflag.FlagSet) (*Config, error) {
 		ChronicleServiceAccount: v.GetString(keyChronicleServiceAccount),
 		ChronicleCustomerID:     v.GetString(keyChronicleCustomerID),
 		ChronicleRegion:         v.GetString(keyChronicleRegion),
+		ChronicleProject:        v.GetString(keyChronicleProject),
 		StateFile:               v.GetString(keyStateFile),
 	}
 
@@ -234,6 +240,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault(keyChronicleServiceAccount, "")
 	v.SetDefault(keyChronicleCustomerID, "")
 	v.SetDefault(keyChronicleRegion, "")
+	v.SetDefault(keyChronicleProject, "")
 	v.SetDefault(keyCacheMaxSize, defaultCacheMaxSize)
 	v.SetDefault(keyStateFile, defaultStateFile)
 }
@@ -320,11 +327,17 @@ func (c *Config) Validate() error {
 	if c.FalconClientSecret == "" {
 		return errors.New("missing configuration: Falcon Client Secret is required")
 	}
-	if c.ChronicleServiceAccount == "" {
-		return errors.New("missing configuration: Chronicle Service Account file is required")
-	}
+	// The Chronicle credential file is optional: when unset, the Chronicle
+	// client authenticates with Application Default Credentials (honoring
+	// GOOGLE_APPLICATION_CREDENTIALS and Workload Identity Federation).
 	if c.ChronicleCustomerID == "" {
 		return errors.New("missing configuration: Chronicle Customer ID is required")
+	}
+	if c.ChronicleProject == "" {
+		return errors.New("missing configuration: Chronicle project is required")
+	}
+	if err := chronicle.ValidateRegion(c.ChronicleRegion); err != nil {
+		return err
 	}
 	return nil
 }

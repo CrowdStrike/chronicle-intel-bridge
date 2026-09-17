@@ -28,10 +28,12 @@ package pipeline
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/crowdstrike/chronicle-intel-bridge/internal/chronicle"
 	"github.com/crowdstrike/chronicle-intel-bridge/internal/dedup"
 	"github.com/crowdstrike/chronicle-intel-bridge/internal/falcon"
 	"github.com/crowdstrike/chronicle-intel-bridge/internal/indicator"
@@ -76,18 +78,26 @@ func (s *fakeSource) callCount() int {
 }
 
 // fakeSink records the batches it accepts and can be scripted to fail a fixed
-// number of times before succeeding, or to fail forever.
+// number of times before succeeding, or to fail forever. When permanent is set
+// its failures wrap chronicle.ErrPermanent so the writer must abort without
+// retrying. attempts counts every Send call, including failed ones.
 type fakeSink struct {
 	mu        sync.Mutex
 	sent      [][]indicator.Indicator
 	failFirst int
 	failAll   bool
+	permanent bool
+	attempts  int
 	resets    int
 }
 
 func (s *fakeSink) Send(_ context.Context, batch []indicator.Indicator) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.attempts++
+	if s.permanent {
+		return fmt.Errorf("sink rejected batch: %w", chronicle.ErrPermanent)
+	}
 	if s.failAll {
 		return errors.New("sink permanently down")
 	}
@@ -111,6 +121,18 @@ func (s *fakeSink) sentCount() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return len(s.sent)
+}
+
+func (s *fakeSink) attemptCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.attempts
+}
+
+func (s *fakeSink) resetCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.resets
 }
 
 // fakeStore records the markers persisted by the writer.
@@ -262,6 +284,9 @@ func TestWriterChunksLargeBatch(t *testing.T) {
 	}
 }
 
+// TestWriterSplitsBatchByEncodedSize now lives in internal/chronicle: the sink
+// owns the byte-budget split, so the writer only bounds a chunk by count.
+
 func TestWriterSavesMarkerOnlyAfterFullDelivery(t *testing.T) {
 	sink := &fakeSink{failAll: true}
 	store := &fakeStore{}
@@ -285,10 +310,84 @@ func TestWriterSavesMarkerOnlyAfterFullDelivery(t *testing.T) {
 	}
 }
 
+// TestWriterDropsAndAdvancesOnPermanentRejection verifies the poison-pill fix:
+// a chunk the sink rejects as permanent is not retried and does not freeze the
+// cycle. It is recorded for dedup and the marker advances past it, so a single
+// unacceptable indicator cannot wedge the pipeline behind it. The context is
+// left live so success depends on the permanent short-circuit, not on
+// cancellation breaking the retry loop.
+func TestWriterDropsAndAdvancesOnPermanentRejection(t *testing.T) {
+	sink := &fakeSink{permanent: true}
+	store := &fakeStore{}
+	cache := newCache(t)
+	w := NewWriter(WriterConfig{Sink: sink, State: store, Dedup: cache})
+
+	in := make(chan Batch, 1)
+	in <- Batch{Indicators: []indicator.Indicator{ind("a")}, Marker: "m1"}
+	close(in)
+	if err := w.Run(context.Background(), in); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if got := sink.attemptCount(); got != 1 {
+		t.Errorf("send attempts = %d, want 1 (permanent rejection must not retry)", got)
+	}
+	if w.failed {
+		t.Error("cycle marked failed on a permanent rejection; the marker must advance instead of freezing")
+	}
+	if got := store.saved(); len(got) != 1 || got[0] != "m1" {
+		t.Errorf("saved markers = %v, want [m1] advanced past the rejected window", got)
+	}
+	if !cache.Seen(ind("a")) {
+		t.Error("rejected indicator not recorded, so a re-fetch of an earlier window would re-send it")
+	}
+}
+
+// TestWriterAdvancesPastPoisonChunkToLaterData is the poison-pill regression
+// test: a batch whose chunk is permanently rejected must commit its marker and
+// let a following batch commit too, proving the resume position advances past a
+// permanently unacceptable indicator rather than re-fetching it forever. The
+// rejected indicator is recorded so an earlier-window re-fetch suppresses it.
+func TestWriterAdvancesPastPoisonChunkToLaterData(t *testing.T) {
+	sink := &fakeSink{permanent: true}
+	store := &fakeStore{}
+	cache := newCache(t)
+	w := NewWriter(WriterConfig{Sink: sink, State: store, Dedup: cache})
+
+	// The poison batch is rejected permanently, yet its marker still advances.
+	w.deliver(context.Background(), Batch{Indicators: []indicator.Indicator{ind("poison")}, Marker: "m1"})
+	if w.failed {
+		t.Fatal("cycle frozen by a permanent rejection; the poison pill would still block the pipeline")
+	}
+	if w.committed != "m1" {
+		t.Errorf("committed = %q, want m1 advanced past the poison chunk", w.committed)
+	}
+
+	// Good data delivered afterward commits normally, unblocked by the poison.
+	sink.mu.Lock()
+	sink.permanent = false
+	sink.mu.Unlock()
+	w.deliver(context.Background(), Batch{Indicators: []indicator.Indicator{ind("good")}, Marker: "m2"})
+
+	if w.committed != "m2" {
+		t.Errorf("committed = %q, want m2: newer data must flow past the poison", w.committed)
+	}
+	if got := store.saved(); len(got) != 2 || got[0] != "m1" || got[1] != "m2" {
+		t.Errorf("saved markers = %v, want [m1 m2]", got)
+	}
+	if !cache.Seen(ind("poison")) {
+		t.Error("poison indicator not recorded, so an earlier-window re-fetch would re-send it")
+	}
+	if !cache.Seen(ind("good")) {
+		t.Error("good indicator delivered but not recorded")
+	}
+}
+
 func TestWriterRetriesThenSucceeds(t *testing.T) {
 	sink := &fakeSink{failFirst: 2}
 	store := &fakeStore{}
 	w := NewWriter(WriterConfig{Sink: sink, State: store, Dedup: newCache(t)})
+	w.backoff = func(int, error) time.Duration { return 0 }
 
 	in := make(chan Batch, 1)
 	in <- Batch{Indicators: []indicator.Indicator{ind("a")}, Marker: "m1"}
@@ -302,6 +401,65 @@ func TestWriterRetriesThenSucceeds(t *testing.T) {
 	}
 	if got := store.saved(); len(got) != 1 || got[0] != "m1" {
 		t.Errorf("saved markers = %v, want [m1] after transient failures", got)
+	}
+}
+
+// TestWriterResetsSessionThenSucceeds verifies the writer rebuilds the sink
+// session at sessionResetAttempt and then delivers once the transient failures
+// clear. Injecting a zero backoff exercises the multi-attempt path without real
+// waits.
+func TestWriterResetsSessionThenSucceeds(t *testing.T) {
+	// Fail every attempt through sessionResetAttempt, then succeed: the reset
+	// fires on the failing attempt at that index and the next attempt lands.
+	sink := &fakeSink{failFirst: sessionResetAttempt + 1}
+	store := &fakeStore{}
+	w := NewWriter(WriterConfig{Sink: sink, State: store, Dedup: newCache(t)})
+	w.backoff = func(int, error) time.Duration { return 0 }
+
+	in := make(chan Batch, 1)
+	in <- Batch{Indicators: []indicator.Indicator{ind("a")}, Marker: "m1"}
+	close(in)
+	if err := w.Run(context.Background(), in); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if got := sink.resetCount(); got != 1 {
+		t.Errorf("session resets = %d, want 1 at sessionResetAttempt", got)
+	}
+	if sink.sentCount() != 1 {
+		t.Errorf("successful sends = %d, want 1 after the reset", sink.sentCount())
+	}
+	if got := store.saved(); len(got) != 1 || got[0] != "m1" {
+		t.Errorf("saved markers = %v, want [m1]", got)
+	}
+}
+
+// TestWriterFreezesWhenRetriesExhausted verifies that a genuinely transient
+// failure which never clears is retried the full maxSendAttempts times and then
+// freezes the cycle: the marker is held and the cycle is flagged failed so the
+// window is re-fetched. Injecting a zero backoff runs the full schedule without
+// waits, and the context stays live so the freeze comes from exhaustion, not
+// cancellation.
+func TestWriterFreezesWhenRetriesExhausted(t *testing.T) {
+	sink := &fakeSink{failAll: true}
+	store := &fakeStore{}
+	cache := newCache(t)
+	w := NewWriter(WriterConfig{Sink: sink, State: store, Dedup: cache})
+	w.backoff = func(int, error) time.Duration { return 0 }
+
+	w.deliver(context.Background(), Batch{Indicators: []indicator.Indicator{ind("a")}, Marker: "m1"})
+
+	if !w.failed {
+		t.Error("cycle not flagged failed after exhausting all retries")
+	}
+	if got := sink.attemptCount(); got != maxSendAttempts {
+		t.Errorf("send attempts = %d, want %d (full retry schedule)", got, maxSendAttempts)
+	}
+	if got := store.saved(); len(got) != 0 {
+		t.Errorf("saved markers = %v, want none: an undelivered chunk must freeze the marker", got)
+	}
+	if cache.Seen(ind("a")) {
+		t.Error("undelivered indicator recorded; it would be dropped on re-fetch")
 	}
 }
 
@@ -404,6 +562,36 @@ func TestBackoffForCaps(t *testing.T) {
 		if got := backoffFor(tc.attempt); got != tc.want {
 			t.Errorf("backoffFor(%d) = %v, want %v", tc.attempt, got, tc.want)
 		}
+	}
+}
+
+// TestRetryDelayRateLimitFloor verifies the retry wait is raised to the
+// rate-limit minimum only for a rate-limited error and only while the plain
+// exponential backoff is below that floor; other errors and later attempts keep
+// the exponential value.
+func TestRetryDelayRateLimitFloor(t *testing.T) {
+	t.Parallel()
+	rateLimited := fmt.Errorf("chronicle rejected: %w", chronicle.ErrRateLimited)
+	transient := errors.New("transient network error")
+	tests := []struct {
+		name    string
+		attempt int
+		err     error
+		want    time.Duration
+	}{
+		{"rate limit floors attempt 0", 0, rateLimited, rateLimitMinBackoff},
+		{"rate limit floors attempt 4 (16s < 30s)", 4, rateLimited, rateLimitMinBackoff},
+		{"rate limit keeps larger backoff at attempt 5", 5, rateLimited, 32 * time.Second},
+		{"non-rate-limit error uses plain backoff", 0, transient, 1 * time.Second},
+		{"non-rate-limit error at attempt 4", 4, transient, 16 * time.Second},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := retryDelay(tc.attempt, tc.err); got != tc.want {
+				t.Errorf("retryDelay(%d, %v) = %v, want %v", tc.attempt, tc.err, got, tc.want)
+			}
+		})
 	}
 }
 

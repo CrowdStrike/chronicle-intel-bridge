@@ -40,14 +40,21 @@ chronicle:
   # Uncomment to provide Chronicle Customer ID. Alternatively, use CHRONICLE_CUSTOMER_ID variable
   #customer_id: XXX
 
+  # REQUIRED: Google Cloud project linked to the Chronicle instance.
+  # Alternatively, use the CHRONICLE_PROJECT variable.
+  #project: my-gcp-project
+
   # Uncomment to provide Chronicle region. Alternatively, use CHRONICLE_REGION variable.
   # Supported values:
   # - Legacy region codes: EU, UK, IL, AU, SG
-  # - Google Cloud region codes: US, EUROPE, EUROPE-WEST2, EUROPE-WEST3, EUROPE-WEST6, EUROPE-WEST9, EUROPE-WEST12,
-  #   ME-WEST1, ME-CENTRAL1, ME-CENTRAL2, ASIA-SOUTH1, ASIA-SOUTHEAST1, ASIA-NORTHEAST1, AUSTRALIA-SOUTHEAST1,
-  #   SOUTHAMERICA-EAST1, NORTHAMERICA-NORTHEAST2
-  # - If not specified or if an unrecognized value is provided, defaults to US multi-region
-  # - Region codes are case-insensitive
+  # - Google Cloud region codes: US, EU, EUROPE, EUROPE-WEST2, EUROPE-WEST3, EUROPE-WEST6,
+  #   EUROPE-WEST9, EUROPE-WEST12, EUROPE-CENTRAL2, ME-WEST1, ME-CENTRAL1, ME-CENTRAL2,
+  #   AFRICA-SOUTH1, ASIA-SOUTH1, ASIA-EAST1, ASIA-SOUTHEAST1, ASIA-SOUTHEAST2, ASIA-NORTHEAST1,
+  #   ASIA-NORTHEAST3, AUSTRALIA-SOUTHEAST1, SOUTHAMERICA-EAST1, NORTHAMERICA-NORTHEAST2
+  # - If not specified, defaults to US multi-region; an unrecognized value is rejected at startup
+  # - Region codes are case-insensitive, with one exception: the "eu" multi-region endpoint is
+  #   distinct from "europe", so lowercase "eu" routes to the eu endpoint while the legacy "EU"
+  #   code routes to europe.
   #region:
 
 cache:

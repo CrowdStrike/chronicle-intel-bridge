@@ -26,6 +26,21 @@ Forwarded indicators now include the per-label `created_on` field. This is inten
 
 `LOG_FORMAT` (text/json) and `STATE_FILE` are new options with no Python equivalent; existing deployments need no change to keep the previous behavior.
 
+### Chronicle API migration (new required `CHRONICLE_PROJECT`)
+
+CCIB now delivers indicators through the Google SecOps / Chronicle v1 API
+(`{region}-chronicle.googleapis.com`, `logs:import`) instead of the legacy
+Chronicle Ingestion API (`malachiteingestion-pa.googleapis.com`,
+`unstructuredlogentries:batchCreate`). This changes the deployment contract:
+
+- **`CHRONICLE_PROJECT` is now required.** The new API is addressed by the
+  Google Cloud project linked to your Chronicle instance; startup fails fast if
+  it is unset.
+- **The service account uses the single `cloud-platform` OAuth scope** and must
+  be authorized for the Chronicle API on that project (see Prerequisites).
+- **An unknown `CHRONICLE_REGION` is now rejected at startup** rather than
+  silently falling back to the US endpoint.
+
 ## Prerequisites
 
 - Create a new API key pair at [CrowdStrike Falcon](https://falcon.crowdstrike.com/support/api-clients-and-keys). This key pair is used to read Falcon Intelligence indicators.
@@ -33,10 +48,33 @@ Forwarded indicators now include the per-label `created_on` field. This is inten
    Make sure only the following permission is assigned to the key pair:
   - **Indicators (Falcon Intelligence)**: READ
 
-- Obtain a Chronicle Service Account file and Chronicle Customer ID.
-  > A JSON file that contains the necessary credentials to authenticate with Chronicle.
-  >
-  > Your Chronicle Support representative should be able to provide you with your Chronicle Customer ID and Service Account JSON file.
+- Obtain your Chronicle Customer ID, the Google Cloud project ID linked to your
+  Chronicle instance, and credentials that can call the Chronicle API.
+  > Your Chronicle Support representative should be able to provide you with your
+  > Chronicle Customer ID and project ID.
+
+  Credentials can be supplied three ways, in order of Google's recommendation:
+
+  - **Workload Identity Federation (recommended).** Point
+    `GOOGLE_SERVICE_ACCOUNT_FILE` at an `external_account` credential
+    configuration file. WIF avoids long-lived service account keys.
+  - **Application Default Credentials.** Leave `GOOGLE_SERVICE_ACCOUNT_FILE`
+    unset and CCIB uses ADC, honoring `GOOGLE_APPLICATION_CREDENTIALS` and the
+    ambient Google Cloud environment (e.g. an attached service account on GKE or
+    Compute Engine).
+  - **Service account key file.** Point `GOOGLE_SERVICE_ACCOUNT_FILE` at a
+    `service_account` JSON key.
+
+  > **Create a _new_ service account.** A legacy Chronicle service account —
+  > typically one whose email contains `bk` or `malachite-cx` — is rejected by
+  > the modern Chronicle API with HTTP 403.
+
+  Whichever method you use, the identity authenticates with the single
+  `https://www.googleapis.com/auth/cloud-platform` OAuth scope and must be
+  granted the **Chronicle API Editor** role (or equivalent permissions on
+  `logs:import`).
+
+- The `CROWDSTRIKE_IOC` log type must be enabled for the target Chronicle instance. CCIB delivers every batch to `logTypes/CROWDSTRIKE_IOC/logs:import`; if that log type is not registered under the new Chronicle API, the instance rejects the import. This log type is standard in Google SecOps but may need to be enabled by your Chronicle Support representative on older instances.
 
 ## Configuration
 
@@ -58,8 +96,9 @@ key. An unset flag or empty environment variable falls through to the next sourc
 | `FALCON_CLIENT_ID` | Falcon API client ID |
 | `FALCON_CLIENT_SECRET` | Falcon API client secret |
 | `CHRONICLE_CUSTOMER_ID` | Chronicle Customer ID |
+| `CHRONICLE_PROJECT` | Google Cloud project linked to the Chronicle instance (**required**) |
 | `CHRONICLE_REGION` | Chronicle regional endpoint (optional; defaults to US multi-region) |
-| `GOOGLE_SERVICE_ACCOUNT_FILE` | Path to the Chronicle service account JSON |
+| `GOOGLE_SERVICE_ACCOUNT_FILE` | Path to a Chronicle credential file — a service account key or an `external_account` (WIF) config (optional; unset uses Application Default Credentials) |
 | `CACHE_MAX_SIZE` | Max entries in the in-memory dedup cache (`<= 0` = unbounded) |
 | `STATE_FILE` | Path to the resume-marker state file |
 | `LOG_LEVEL` | `ERROR`, `WARN`, `INFO`, or `DEBUG` |
@@ -70,8 +109,9 @@ export FALCON_CLOUD=YOUR_CLOUD_REGION   # e.g. us-1, us-2, eu-1, us-gov-1
 export FALCON_CLIENT_ID=YOUR_CLIENT_ID
 export FALCON_CLIENT_SECRET=YOUR_CLIENT_SECRET
 export CHRONICLE_CUSTOMER_ID=YOUR_CUSTOMER_ID
+export CHRONICLE_PROJECT=YOUR_GCP_PROJECT
 export CHRONICLE_REGION=YOUR_CHRONICLE_REGION   # optional, defaults to US multi-region
-export GOOGLE_SERVICE_ACCOUNT_FILE=/gcloud/sa.json
+export GOOGLE_SERVICE_ACCOUNT_FILE=/gcloud/sa.json   # optional; unset uses Application Default Credentials
 ```
 
 ### Chronicle Region Configuration
@@ -79,11 +119,16 @@ export GOOGLE_SERVICE_ACCOUNT_FILE=/gcloud/sa.json
 The `CHRONICLE_REGION` environment variable specifies which Chronicle regional endpoint to use. The following values are supported:
 
 - **Legacy region codes**: EU, UK, IL, AU, SG
-- **Google Cloud region codes**: US, EUROPE, EUROPE-WEST2, EUROPE-WEST3, EUROPE-WEST6, EUROPE-WEST9, EUROPE-WEST12, ME-WEST1, ME-CENTRAL1, ME-CENTRAL2, ASIA-SOUTH1, ASIA-SOUTHEAST1, ASIA-NORTHEAST1, AUSTRALIA-SOUTHEAST1, SOUTHAMERICA-EAST1, NORTHAMERICA-NORTHEAST2
-- If not specified or if an unrecognized value is provided, it defaults to the US multi-region endpoint
+- **Google Cloud region codes**: US, EU, EUROPE, EUROPE-WEST2, EUROPE-WEST3, EUROPE-WEST6, EUROPE-WEST9, EUROPE-WEST12, EUROPE-CENTRAL2, ME-WEST1, ME-CENTRAL1, ME-CENTRAL2, AFRICA-SOUTH1, ASIA-SOUTH1, ASIA-EAST1, ASIA-SOUTHEAST1, ASIA-SOUTHEAST2, ASIA-NORTHEAST1, ASIA-NORTHEAST3, AUSTRALIA-SOUTHEAST1, SOUTHAMERICA-EAST1, NORTHAMERICA-NORTHEAST2
+- If not specified, it defaults to the US multi-region endpoint
+- An unrecognized value is rejected at startup so a misconfigured region fails fast rather than silently routing to the wrong endpoint
 
 > [!NOTE]
-> Region codes are case-insensitive, so "eu", "EU", and "Eu" are all treated the same.
+> Region codes are case-insensitive, with one exception. Google documents `eu` as a
+> multi-region endpoint distinct from `europe`, while the legacy Chronicle code `EU`
+> denotes the European instance. CCIB therefore treats lowercase `eu` as the `eu`
+> endpoint and the uppercase legacy `EU` as `europe`; every other code (including
+> `US`/`us` and `EUROPE`/`europe`) is matched case-insensitively.
 
 ### State Persistence
 
@@ -137,6 +182,7 @@ docker run -it --rm \
       -e FALCON_CLIENT_SECRET="$FALCON_CLIENT_SECRET" \
       -e FALCON_CLOUD="$FALCON_CLOUD" \
       -e CHRONICLE_CUSTOMER_ID="$CHRONICLE_CUSTOMER_ID" \
+      -e CHRONICLE_PROJECT="$CHRONICLE_PROJECT" \
       -e CHRONICLE_REGION="$CHRONICLE_REGION" \
       -e GOOGLE_SERVICE_ACCOUNT_FILE=/gcloud/sa.json \
       -v /path/to/your/service-account.json:/gcloud/sa.json:ro \
@@ -153,6 +199,7 @@ docker run -d --restart unless-stopped \
       -e FALCON_CLIENT_SECRET="$FALCON_CLIENT_SECRET" \
       -e FALCON_CLOUD="$FALCON_CLOUD" \
       -e CHRONICLE_CUSTOMER_ID="$CHRONICLE_CUSTOMER_ID" \
+      -e CHRONICLE_PROJECT="$CHRONICLE_PROJECT" \
       -e CHRONICLE_REGION="$CHRONICLE_REGION" \
       -e GOOGLE_SERVICE_ACCOUNT_FILE=/gcloud/sa.json \
       -v /path/to/your/service-account.json:/gcloud/sa.json:ro \

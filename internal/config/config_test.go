@@ -284,6 +284,7 @@ func baseConfig() *Config {
 		FalconClientSecret:      "secret",
 		ChronicleServiceAccount: "/secrets/sa.json",
 		ChronicleCustomerID:     "cust",
+		ChronicleProject:        "proj-1",
 		CacheMaxSize:            100,
 		StateFile:               "data/state.json",
 	}
@@ -316,8 +317,13 @@ func TestValidate(t *testing.T) {
 		{"empty log level", func(c *Config) { c.LogLevel = "" }, true},
 		{"missing client_id", func(c *Config) { c.FalconClientID = "" }, true},
 		{"missing client_secret", func(c *Config) { c.FalconClientSecret = "" }, true},
-		{"missing service_account", func(c *Config) { c.ChronicleServiceAccount = "" }, true},
+		{"empty service_account ok (falls back to ADC)", func(c *Config) { c.ChronicleServiceAccount = "" }, false},
 		{"missing customer_id", func(c *Config) { c.ChronicleCustomerID = "" }, true},
+		{"missing project", func(c *Config) { c.ChronicleProject = "" }, true},
+		{"empty region ok", func(c *Config) { c.ChronicleRegion = "" }, false},
+		{"legacy region alias ok", func(c *Config) { c.ChronicleRegion = "EU" }, false},
+		{"gcp region ok", func(c *Config) { c.ChronicleRegion = "australia-southeast1" }, false},
+		{"bad region", func(c *Config) { c.ChronicleRegion = "narnia" }, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -110,6 +110,7 @@ func build(ctx context.Context, cfg *config.Config) (*pipeline.Reader, *pipeline
 		"falcon_cloud", cfg.FalconCloud,
 		"chronicle_region", cfg.ChronicleRegion,
 		"chronicle_customer_id", cfg.ChronicleCustomerID,
+		"chronicle_project", cfg.ChronicleProject,
 	)
 
 	source, err := falcon.New(ctx, falcon.Config{
@@ -121,14 +122,21 @@ func build(ctx context.Context, cfg *config.Config) (*pipeline.Reader, *pipeline
 		return nil, nil, err
 	}
 
-	saJSON, err := os.ReadFile(cfg.ChronicleServiceAccount)
-	if err != nil {
-		return nil, nil, fmt.Errorf("reading service account file %q: %w", cfg.ChronicleServiceAccount, err)
+	// The credential file is optional: when no path is configured, the
+	// Chronicle client falls back to Application Default Credentials (which
+	// honor GOOGLE_APPLICATION_CREDENTIALS and Workload Identity Federation).
+	var credJSON []byte
+	if cfg.ChronicleServiceAccount != "" {
+		credJSON, err = os.ReadFile(cfg.ChronicleServiceAccount)
+		if err != nil {
+			return nil, nil, fmt.Errorf("reading credential file %q: %w", cfg.ChronicleServiceAccount, err)
+		}
 	}
 	sink, err := chronicle.New(ctx, chronicle.Config{
-		CustomerID:         cfg.ChronicleCustomerID,
-		Region:             cfg.ChronicleRegion,
-		ServiceAccountJSON: saJSON,
+		CustomerID:     cfg.ChronicleCustomerID,
+		Region:         cfg.ChronicleRegion,
+		Project:        cfg.ChronicleProject,
+		CredentialJSON: credJSON,
 	})
 	if err != nil {
 		return nil, nil, err
