@@ -7,7 +7,7 @@ require (
 	github.com/go-viper/encoding/ini v0.1.1
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/spf13/cobra v1.10.2
-	github.com/spf13/pflag v1.0.10
+	github.com/spf13/pflag v1.1.0
 	github.com/spf13/viper v1.21.0
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/sync v0.23.0
