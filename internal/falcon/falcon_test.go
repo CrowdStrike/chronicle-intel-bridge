@@ -105,6 +105,9 @@ func TestCursorFilter(t *testing.T) {
 		want string
 	}{
 		{"marker cursor", FromMarker("MARK-1"), "_marker:>='MARK-1'+deleted:false"},
+		{"marker quote escaped", FromMarker("a'b"), `_marker:>='a\'b'+deleted:false`},
+		{"marker trailing backslash escaped", FromMarker(`a\`), `_marker:>='a\\'+deleted:false`},
+		{"marker injection neutralized", FromMarker("9999999999.0'+type:'hash_md5"), `_marker:>='9999999999.0\'+type:\'hash_md5'+deleted:false`},
 		{"time cursor", FromTime(1700000000), "last_updated:>=1700000000+deleted:false"},
 	}
 	for _, tc := range tests {

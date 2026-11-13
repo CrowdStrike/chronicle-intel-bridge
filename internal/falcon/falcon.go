@@ -56,6 +56,12 @@ const fetchRetryDelay = 5 * time.Second
 // userAgent identifies CCIB to the Falcon API.
 var userAgent = "chronicle-intel-bridge/" + version.Version
 
+// fqlEscaper makes a value safe to embed inside a single-quoted FQL string, so
+// a quote in the value cannot close the string and append filter terms.
+// Backslash is escaped too; otherwise a value ending in a backslash would turn
+// the closing quote into an escaped one.
+var fqlEscaper = strings.NewReplacer(`\`, `\\`, `'`, `\'`)
+
 // indicatorQuerier is the slice of the gofalcon intel client CCIB depends on,
 // narrowed to the single call it makes so tests can supply a fake.
 type indicatorQuerier interface {
@@ -127,7 +133,7 @@ func FromTime(since int64) Cursor {
 // last_updated.
 func (c Cursor) filter() string {
 	if c.marker != "" {
-		return fmt.Sprintf("_marker:>='%s'+deleted:false", c.marker)
+		return fmt.Sprintf("_marker:>='%s'+deleted:false", fqlEscaper.Replace(c.marker))
 	}
 	return fmt.Sprintf("last_updated:>=%d+deleted:false", c.since)
 }
